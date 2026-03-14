@@ -71,8 +71,11 @@ docker compose up -d
 # 2. Aguarde o container ficar saudável
 docker compose ps
 
-# 3. Suba a aplicação com o perfil postgres
+# 3.1 Suba a aplicação (Linux/Mac/WSL)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+
+# 3.2 Suba a aplicação (Windows PowerShell)
+./mvnw spring-boot:run "-Dspring-boot.run.profiles=postgres"
 ```
 
 Credenciais configuradas no `docker-compose.yml`:
