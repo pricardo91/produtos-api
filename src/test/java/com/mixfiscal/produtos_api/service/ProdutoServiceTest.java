@@ -1,4 +1,4 @@
-package com.mixfiscal.produtos_api;
+package com.mixfiscal.produtos_api.service;
 
 import com.mixfiscal.produtos_api.client.TaxIntegrationClient;
 import com.mixfiscal.produtos_api.dto.in.ProdutoCreateRequest;
@@ -10,7 +10,6 @@ import com.mixfiscal.produtos_api.exception.ProdutoNaoEncontradoException;
 import com.mixfiscal.produtos_api.exception.SkuJaCadastradoException;
 import com.mixfiscal.produtos_api.mapper.ProdutoMapper;
 import com.mixfiscal.produtos_api.repository.ProdutoRepository;
-import com.mixfiscal.produtos_api.service.ProdutoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -83,6 +82,24 @@ class ProdutoServiceTest {
                 .build();
     }
 
+    private void mockSaveAndMapperPassthrough() {
+
+        when(produtoRepository.save(any(Produto.class)))
+                .thenAnswer(chamada -> chamada.getArgument(0));
+
+        when(mapper.toResponse(any(Produto.class))).thenAnswer(
+                chamada -> {
+                    Produto p = chamada.getArgument(0);
+                    return ProdutoResponse.builder()
+                            .id(p.getId())
+                            .nome(p.getNome())
+                            .sku(p.getSku())
+                            .precoBase(p.getPrecoBase())
+                            .codigoNcm(p.getCodigoNcm())
+                            .build();
+                });
+    }
+
     @Nested
     @DisplayName("criarNovoProduto")
     class CriarNovoProduto {
@@ -90,7 +107,7 @@ class ProdutoServiceTest {
         @Test
         @DisplayName("deve criar produto com sucesso quando SKU não existe")
         void deveCriarProdutoComSucesso() {
-            // ARRANGE - prepara o cenario
+            // ARRANGE
             ProdutoCreateRequest request = ProdutoCreateRequest.builder()
                     .nome("Notebook Dell")
                     .sku("NOTE-001")
@@ -103,15 +120,13 @@ class ProdutoServiceTest {
             when(produtoRepository.save(produto)).thenReturn(produto);
             when(mapper.toResponse(produto)).thenReturn(produtoResponse);
 
-            // ACT - executa o metodo que estamos testando
+            // ACT
             ProdutoResponse resultado = produtoService.criarNovoProduto(request);
 
-            // ASSERT - verifica se o resultado é o esperado
+            // ASSERT
             assertThat(resultado).isNotNull();
             assertThat(resultado.getSku()).isEqualTo("NOTE-001");
             assertThat(resultado.getNome()).isEqualTo("Notebook Dell");
-
-            // verifica que o save foi chamado exatamente 1 vez
             verify(produtoRepository, times(1)).save(produto);
         }
 
@@ -128,11 +143,10 @@ class ProdutoServiceTest {
 
             when(produtoRepository.existsBySku("NOTE-001")).thenReturn(true);
 
-            // ACT + ASSERT — espera que o método lance a exceção correta
+            // ACT + ASSERT
             assertThatThrownBy(() -> produtoService.criarNovoProduto(request))
                     .isInstanceOf(SkuJaCadastradoException.class);
 
-            // garante que o save NUNCA foi chamado
             verify(produtoRepository, never()).save(any());
         }
     }
@@ -162,7 +176,6 @@ class ProdutoServiceTest {
             ProdutoResponse resultado = produtoService.listarProdutoPorId(produtoId);
 
             // ASSERT
-            assertThat(resultado).isNotNull();
             assertThat(resultado.getImposto()).isNotNull();
             assertThat(resultado.getImposto().getNcm()).isEqualTo("8471.30.12");
             assertThat(resultado.getImposto().getAliquotaII()).isEqualByComparingTo("16.00");
@@ -189,16 +202,13 @@ class ProdutoServiceTest {
         void deveRetornarPaginaComProdutos() {
             // ARRANGE
             Pageable pageable = PageRequest.of(0, 10);
-            Page<Produto> paginaProdutos = new PageImpl<>(List.of(produto));
-
-            when(produtoRepository.findAll(pageable)).thenReturn(paginaProdutos);
+            when(produtoRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(produto)));
             when(mapper.toResponse(produto)).thenReturn(produtoResponse);
 
             // ACT
             Page<ProdutoResponse> resultado = produtoService.listaProdutos(pageable);
 
             // ASSERT
-            assertThat(resultado).isNotNull();
             assertThat(resultado.getContent()).hasSize(1);
             assertThat(resultado.getContent().get(0).getSku()).isEqualTo("NOTE-001");
         }
@@ -208,15 +218,12 @@ class ProdutoServiceTest {
         void deveRetornarPaginaVaziaQuandoNaoHaProdutos() {
             // ARRANGE
             Pageable pageable = PageRequest.of(0, 10);
-            Page<Produto> paginaVazia = new PageImpl<>(Collections.emptyList());
-
-            when(produtoRepository.findAll(pageable)).thenReturn(paginaVazia);
+            when(produtoRepository.findAll(pageable)).thenReturn(new PageImpl<>(Collections.emptyList()));
 
             // ACT
             Page<ProdutoResponse> resultado = produtoService.listaProdutos(pageable);
 
             // ASSERT
-            assertThat(resultado).isNotNull();
             assertThat(resultado.getContent()).isEmpty();
         }
     }
@@ -234,7 +241,7 @@ class ProdutoServiceTest {
             // ACT
             produtoService.deletaProdutoPorId(produtoId);
 
-            // ASSERT - verifica que deleteById foi chamado com o ID correto
+            // ASSERT
             verify(produtoRepository, times(1)).deleteById(produtoId);
         }
 
@@ -248,11 +255,9 @@ class ProdutoServiceTest {
             assertThatThrownBy(() -> produtoService.deletaProdutoPorId(produtoId))
                     .isInstanceOf(ProdutoNaoEncontradoException.class);
 
-            // garante que deleteById NUNCA foi chamado
             verify(produtoRepository, never()).deleteById(any());
         }
     }
-
 
     @Nested
     @DisplayName("atualizaCadastroProdutoPorId")
@@ -284,7 +289,6 @@ class ProdutoServiceTest {
             ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId, request);
 
             // ASSERT
-            assertThat(resultado).isNotNull();
             assertThat(resultado.getNome()).isEqualTo("Notebook Dell Atualizado");
             assertThat(resultado.getPrecoBase()).isEqualByComparingTo("5000.00");
         }
@@ -293,101 +297,56 @@ class ProdutoServiceTest {
         @DisplayName("deve lançar ProdutoNaoEncontradoException quando ID não existe")
         void deveLancarExcecaoQuandoIdNaoExiste() {
             // ARRANGE
-            ProdutoUpdateRequest request = ProdutoUpdateRequest.builder()
-                    .nome("Qualquer Nome")
-                    .build();
-
             when(produtoRepository.findById(produtoId)).thenReturn(Optional.empty());
 
             // ACT + ASSERT
-            assertThatThrownBy(() -> produtoService.atualizaCadastroProdutoPorId(produtoId, request))
+            assertThatThrownBy(() -> produtoService.atualizaCadastroProdutoPorId(produtoId,
+                    ProdutoUpdateRequest.builder().nome("Qualquer Nome").build()))
                     .isInstanceOf(ProdutoNaoEncontradoException.class);
         }
 
         @Test
         @DisplayName("deve manter nome original quando nome não é informado no request")
         void deveManterNomeOriginalQuandoNomeNaoInformado() {
-            // ARRANGE - request sem nome (null)
-            ProdutoUpdateRequest request = ProdutoUpdateRequest.builder()
-                    .precoBase(new BigDecimal("5000.00"))
-                    .build();
-
+            // ARRANGE
             when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(produto));
-            when(produtoRepository.save(any(Produto.class))).thenAnswer(invocation -> {
-                // captura o produto que foi passado pro save e devolve ele mesmo
-                return invocation.getArgument(0);
-            });
-            when(mapper.toResponse(any(Produto.class))).thenAnswer(invocation -> {
-                Produto p = invocation.getArgument(0);
-                return ProdutoResponse.builder()
-                        .id(p.getId())
-                        .nome(p.getNome())
-                        .sku(p.getSku())
-                        .precoBase(p.getPrecoBase())
-                        .codigoNcm(p.getCodigoNcm())
-                        .build();
-            });
+            mockSaveAndMapperPassthrough();
 
             // ACT
-            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId, request);
+            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId,
+                    ProdutoUpdateRequest.builder().precoBase(new BigDecimal("5000.00")).build());
 
-            // ASSERT - nome deve ser o original "Notebook Dell", nao null
+            // ASSERT
             assertThat(resultado.getNome()).isEqualTo("Notebook Dell");
         }
 
         @Test
         @DisplayName("deve manter preço original quando preço não é informado no request")
         void deveManterPrecoOriginalQuandoPrecoNaoInformado() {
-            // ARRANGE - request sem preço (null)
-            ProdutoUpdateRequest request = ProdutoUpdateRequest.builder()
-                    .nome("Notebook Dell Atualizado")
-                    .build();
-
+            // ARRANGE
             when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(produto));
-            when(produtoRepository.save(any(Produto.class))).thenAnswer(invocation -> invocation.getArgument(0));
-            when(mapper.toResponse(any(Produto.class))).thenAnswer(invocation -> {
-                Produto p = invocation.getArgument(0);
-                return ProdutoResponse.builder()
-                        .id(p.getId())
-                        .nome(p.getNome())
-                        .sku(p.getSku())
-                        .precoBase(p.getPrecoBase())
-                        .codigoNcm(p.getCodigoNcm())
-                        .build();
-            });
+            mockSaveAndMapperPassthrough();
 
             // ACT
-            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId, request);
+            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId,
+                    ProdutoUpdateRequest.builder().nome("Notebook Dell Atualizado").build());
 
-            // ASSERT - preço deve ser o original 4599.90, nao null
+            // ASSERT
             assertThat(resultado.getPrecoBase()).isEqualByComparingTo("4599.90");
         }
 
         @Test
         @DisplayName("deve manter NCM original quando NCM não é informado no request")
         void deveManterNcmOriginalQuandoNcmNaoInformado() {
-            // ARRANGE - request sem NCM (null)
-            ProdutoUpdateRequest request = ProdutoUpdateRequest.builder()
-                    .nome("Notebook Dell Atualizado")
-                    .build();
-
+            // ARRANGE
             when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(produto));
-            when(produtoRepository.save(any(Produto.class))).thenAnswer(invocation -> invocation.getArgument(0));
-            when(mapper.toResponse(any(Produto.class))).thenAnswer(invocation -> {
-                Produto p = invocation.getArgument(0);
-                return ProdutoResponse.builder()
-                        .id(p.getId())
-                        .nome(p.getNome())
-                        .sku(p.getSku())
-                        .precoBase(p.getPrecoBase())
-                        .codigoNcm(p.getCodigoNcm())
-                        .build();
-            });
+            mockSaveAndMapperPassthrough();
 
             // ACT
-            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId, request);
+            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId,
+                    ProdutoUpdateRequest.builder().nome("Notebook Dell Atualizado").build());
 
-            // ASSERT - NCM deve ser o original "8471.30.12", nao null
+            // ASSERT
             assertThat(resultado.getCodigoNcm()).isEqualTo("8471.30.12");
         }
     }
