@@ -22,7 +22,7 @@ import java.util.UUID;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class ProdutoService {
+public class ProdutoServiceImpl implements ProdutoService {
 
     private final ProdutoRepository produtoRepository;
     private final TaxIntegrationClient taxIntegrationClient;
@@ -77,16 +77,9 @@ public class ProdutoService {
         Produto produto = produtoRepository.findById(idProduto)
                 .orElseThrow(() -> new ProdutoNaoEncontradoException(idProduto));
 
-        Produto produtoAtualizado = Produto.builder()
-                .id(produto.getId())
-                .nome(request.getNome() != null ? request.getNome() : produto.getNome())
-                .sku(produto.getSku())
-                .precoBase(request.getPrecoBase() != null ? request.getPrecoBase() : produto.getPrecoBase())
-                .codigoNcm(request.getCodigoNcm() != null ? request.getCodigoNcm() : produto.getCodigoNcm())
-                .build();
+        produto.atualizar(request.getNome(), request.getPrecoBase(), request.getCodigoNcm());
 
-        Produto salvo = produtoRepository.save(produtoAtualizado);
         log.info("[end] - {} - atualizaCadastroProdutoPorId | ID: {}", getClass().getSimpleName(), idProduto);
-        return mapper.toResponse(salvo);
+        return mapper.toResponse(produtoRepository.save(produto));
     }
 }
