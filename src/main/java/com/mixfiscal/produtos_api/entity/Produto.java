@@ -33,4 +33,16 @@ public class Produto {
 
     @Column(name = "ncm", nullable = false)
     private String codigoNcm;
+
+    public void atualizar(String nome, BigDecimal precoBase, String codigoNcm) {
+        if (nome != null) {
+            this.nome = nome;
+        }
+        if (precoBase != null) {
+            this.precoBase = precoBase;
+        }
+        if (codigoNcm != null) {
+            this.codigoNcm = codigoNcm;
+        }
+    }
 }
