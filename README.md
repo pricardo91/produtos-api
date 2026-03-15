@@ -16,6 +16,7 @@ API RESTful para gerenciamento de produtos com integração tributária via cód
 | H2 Database | — | Banco em memória (perfil padrão) |
 | Lombok | — | Redução de boilerplate |
 | SpringDoc OpenAPI | 2.x | Documentação Swagger |
+| MapStruct | 1.5.5 | Mapeamento entre entidades e DTOs |
 | JUnit 5 + Mockito | — | Testes unitários |
 | Docker / Docker Compose | — | Infraestrutura local |
 | Maven | 3.9+ | Gerenciador de dependências |
