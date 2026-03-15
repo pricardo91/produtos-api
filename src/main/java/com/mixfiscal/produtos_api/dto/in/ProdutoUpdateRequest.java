@@ -19,10 +19,6 @@ public class ProdutoUpdateRequest {
     @Size(min = 3, max = 100, message = "O nome deve conter entre 3 e 100 carateres")
     private String nome;
 
-    /*@Schema(description = "SKU do produto", example = "PROD-001-8GB-I5")
-    @Size(min = 3, max = 100, message = "O SKU deve conter entre 3 e 100 carateres")
-    private String sku;*/
-
     @Schema(description = "Preço base do produto", example = "2859.99", format = "decimal")
     @Positive(message = "Valor base do produto deve ser maior que zero")
     private BigDecimal precoBase;
