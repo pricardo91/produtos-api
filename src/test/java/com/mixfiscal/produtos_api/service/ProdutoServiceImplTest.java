@@ -1,6 +1,6 @@
 package com.mixfiscal.produtos_api.service;
 
-import com.mixfiscal.produtos_api.client.TaxIntegrationClient;
+import com.mixfiscal.produtos_api.client.TaxIntegrationClientMock;
 import com.mixfiscal.produtos_api.dto.in.ProdutoCreateRequest;
 import com.mixfiscal.produtos_api.dto.in.ProdutoUpdateRequest;
 import com.mixfiscal.produtos_api.dto.out.ProdutoResponse;
@@ -35,17 +35,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ProdutoServiceTest {
+class ProdutoServiceImplTest {
 
     @Mock
     private ProdutoRepository produtoRepository;
     @Mock
-    private TaxIntegrationClient taxIntegrationClient;
+    private TaxIntegrationClientMock taxIntegrationClientMock;
     @Mock
     private ProdutoMapper mapper;
 
     @InjectMocks
-    private ProdutoService produtoService;
+    private ProdutoServiceImpl produtoServiceImpl;
 
     private UUID produtoId;
     private Produto produto;
@@ -121,7 +121,7 @@ class ProdutoServiceTest {
             when(mapper.toResponse(produto)).thenReturn(produtoResponse);
 
             // ACT
-            ProdutoResponse resultado = produtoService.criarNovoProduto(request);
+            ProdutoResponse resultado = produtoServiceImpl.criarNovoProduto(request);
 
             // ASSERT
             assertThat(resultado).isNotNull();
@@ -144,7 +144,7 @@ class ProdutoServiceTest {
             when(produtoRepository.existsBySku("NOTE-001")).thenReturn(true);
 
             // ACT + ASSERT
-            assertThatThrownBy(() -> produtoService.criarNovoProduto(request))
+            assertThatThrownBy(() -> produtoServiceImpl.criarNovoProduto(request))
                     .isInstanceOf(SkuJaCadastradoException.class);
 
             verify(produtoRepository, never()).save(any());
@@ -169,11 +169,11 @@ class ProdutoServiceTest {
                     .build();
 
             when(produtoRepository.findById(produtoId)).thenReturn(Optional.of(produto));
-            when(taxIntegrationClient.consultarAliqImpostoPorNcm("8471.30.12")).thenReturn(taxResponse);
+            when(taxIntegrationClientMock.consultarAliqImpostoPorNcm("8471.30.12")).thenReturn(taxResponse);
             when(mapper.toResponse(produto, taxResponse)).thenReturn(responseComImposto);
 
             // ACT
-            ProdutoResponse resultado = produtoService.listarProdutoPorId(produtoId);
+            ProdutoResponse resultado = produtoServiceImpl.listarProdutoPorId(produtoId);
 
             // ASSERT
             assertThat(resultado.getImposto()).isNotNull();
@@ -188,7 +188,7 @@ class ProdutoServiceTest {
             when(produtoRepository.findById(produtoId)).thenReturn(Optional.empty());
 
             // ACT + ASSERT
-            assertThatThrownBy(() -> produtoService.listarProdutoPorId(produtoId))
+            assertThatThrownBy(() -> produtoServiceImpl.listarProdutoPorId(produtoId))
                     .isInstanceOf(ProdutoNaoEncontradoException.class);
         }
     }
@@ -206,7 +206,7 @@ class ProdutoServiceTest {
             when(mapper.toResponse(produto)).thenReturn(produtoResponse);
 
             // ACT
-            Page<ProdutoResponse> resultado = produtoService.listaProdutos(pageable);
+            Page<ProdutoResponse> resultado = produtoServiceImpl.listaProdutos(pageable);
 
             // ASSERT
             assertThat(resultado.getContent()).hasSize(1);
@@ -221,7 +221,7 @@ class ProdutoServiceTest {
             when(produtoRepository.findAll(pageable)).thenReturn(new PageImpl<>(Collections.emptyList()));
 
             // ACT
-            Page<ProdutoResponse> resultado = produtoService.listaProdutos(pageable);
+            Page<ProdutoResponse> resultado = produtoServiceImpl.listaProdutos(pageable);
 
             // ASSERT
             assertThat(resultado.getContent()).isEmpty();
@@ -239,7 +239,7 @@ class ProdutoServiceTest {
             when(produtoRepository.existsById(produtoId)).thenReturn(true);
 
             // ACT
-            produtoService.deletaProdutoPorId(produtoId);
+            produtoServiceImpl.deletaProdutoPorId(produtoId);
 
             // ASSERT
             verify(produtoRepository, times(1)).deleteById(produtoId);
@@ -252,7 +252,7 @@ class ProdutoServiceTest {
             when(produtoRepository.existsById(produtoId)).thenReturn(false);
 
             // ACT + ASSERT
-            assertThatThrownBy(() -> produtoService.deletaProdutoPorId(produtoId))
+            assertThatThrownBy(() -> produtoServiceImpl.deletaProdutoPorId(produtoId))
                     .isInstanceOf(ProdutoNaoEncontradoException.class);
 
             verify(produtoRepository, never()).deleteById(any());
@@ -286,7 +286,7 @@ class ProdutoServiceTest {
             when(mapper.toResponse(any(Produto.class))).thenReturn(responseAtualizado);
 
             // ACT
-            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId, request);
+            ProdutoResponse resultado = produtoServiceImpl.atualizaCadastroProdutoPorId(produtoId, request);
 
             // ASSERT
             assertThat(resultado.getNome()).isEqualTo("Notebook Dell Atualizado");
@@ -300,7 +300,7 @@ class ProdutoServiceTest {
             when(produtoRepository.findById(produtoId)).thenReturn(Optional.empty());
 
             // ACT + ASSERT
-            assertThatThrownBy(() -> produtoService.atualizaCadastroProdutoPorId(produtoId,
+            assertThatThrownBy(() -> produtoServiceImpl.atualizaCadastroProdutoPorId(produtoId,
                     ProdutoUpdateRequest.builder().nome("Qualquer Nome").build()))
                     .isInstanceOf(ProdutoNaoEncontradoException.class);
         }
@@ -313,7 +313,7 @@ class ProdutoServiceTest {
             mockSaveAndMapperPassthrough();
 
             // ACT
-            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId,
+            ProdutoResponse resultado = produtoServiceImpl.atualizaCadastroProdutoPorId(produtoId,
                     ProdutoUpdateRequest.builder().precoBase(new BigDecimal("5000.00")).build());
 
             // ASSERT
@@ -328,7 +328,7 @@ class ProdutoServiceTest {
             mockSaveAndMapperPassthrough();
 
             // ACT
-            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId,
+            ProdutoResponse resultado = produtoServiceImpl.atualizaCadastroProdutoPorId(produtoId,
                     ProdutoUpdateRequest.builder().nome("Notebook Dell Atualizado").build());
 
             // ASSERT
@@ -343,7 +343,7 @@ class ProdutoServiceTest {
             mockSaveAndMapperPassthrough();
 
             // ACT
-            ProdutoResponse resultado = produtoService.atualizaCadastroProdutoPorId(produtoId,
+            ProdutoResponse resultado = produtoServiceImpl.atualizaCadastroProdutoPorId(produtoId,
                     ProdutoUpdateRequest.builder().nome("Notebook Dell Atualizado").build());
 
             // ASSERT
